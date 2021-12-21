@@ -18,10 +18,15 @@ def joint_loss(y_true, y_pred):
 # Load model
 def load_model(dir='./models/model_21_12_2021_15_41_21'):
     print("Loading model...")
-    return keras.models.load_model(dir, custom_objects={'joint_loss': joint_loss})
+    model = keras.models.load_model(f'{dir}/model', custom_objects={'joint_loss': joint_loss})
+    with open(f'{dir}/tokenizer.txt') as f:
+        tokenizer_word_index = json.load(f)
+    with open(f'{dir}/MAX_SEQ_LEN.txt') as f:
+        MAX_SEQ_LEN = json.load(f)
+    return model, tokenizer_word_index, MAX_SEQ_LEN
 
 
-def get_test_data(path):
+def get_test_data(path, tokenizer_word_index, MAX_SEQ_LEN):
     print(f'Get test data from {path}')
     # Import json file from path
     def load_json(dataset_path="training_set.json"):    
@@ -82,12 +87,10 @@ def get_test_data(path):
         padded = pad_sequences(sequences=seq, maxlen=max_len, padding='post')
         return padded
 
-    def tokenize(df):
+    def tokenize(df, tokenizer_word_index, MAX_SEQ_LEN):
         # HOW TO HANDLE TOKENIZER?????
-        tokenizer = Tokenizer(oov_token=1)
-        MAX_SEQ_LEN = 653
-        tokenizer.fit_on_texts(df["context"])
-        tokenizer.fit_on_texts(df["question"])
+        tokenizer = Tokenizer()
+        tokenizer.word_index = tokenizer_word_index
         context = textToTensor(tokenizer, MAX_SEQ_LEN, df['context'])
         question = textToTensor(tokenizer, MAX_SEQ_LEN, df['question'])
         return context, question
@@ -95,7 +98,7 @@ def get_test_data(path):
     data = load_json(path)
     df = create_dataframe(data)
     df = clean_text(df)
-    context, question = tokenize(df)
+    context, question = tokenize(df, tokenizer_word_index, MAX_SEQ_LEN)
     return context, question, df
 
 
@@ -116,6 +119,7 @@ def make_answer_dict(start_preds, end_preds, df):
         # NB!!!: fore some reason the end is projected to be before the start so the answers are empty strings. 
         # Just doing this for now.
         if answ == "":
+            print("\n\nSOMETHING STRANGE IS GOING ON AND END PRED IS BEFORE START PRED\n\n")
             answ = df['context'][index].split(' ')[start]
         return answ
 
@@ -136,8 +140,8 @@ def write_predictions(answer_dict, path):
      file.write(json.dumps(answer_dict))
 
 def main(test_path, prediction_path):
-    model = load_model()
-    context, question, df = get_test_data(test_path)
+    model, tokenizer_word_index, MAX_SEQ_LEN = load_model()
+    context, question, df = get_test_data(test_path, tokenizer_word_index, MAX_SEQ_LEN)
     pred_start, pred_end = get_predicitons(model, context, question)
     answer_dict = make_answer_dict(pred_start, pred_end, df)
     write_predictions(answer_dict, prediction_path)
