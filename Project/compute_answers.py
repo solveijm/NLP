@@ -10,19 +10,23 @@ from functools import reduce
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 import sys
+from keras import backend as K
 
 
-def joint_loss(y_true, y_pred):
-    '''
-    Define loss function used in the trained model
-    '''
-    loss_start = tf.keras.losses.CategoricalCrossentropy()(y_true[0], y_pred[0])
-    loss_end = tf.keras.losses.CategoricalCrossentropy()(y_true[1], y_pred[1])
-    #tf.print("Pred start", y_pred[0])
-    return loss_start + loss_end
 
+_EPSILON = 1e-7
+def categorical_cross_entropy_loss(target, output):
+    output /= tf.reduce_sum(output, -1, True)
+    # manual computation of crossentropy
+    epsilon = K.constant(_EPSILON, output.dtype.base_dtype)
+    output = tf.clip_by_value(output, epsilon, 1. - epsilon)
+    return - tf.reduce_sum(target * tf.math.log(output), -1)
+
+losses = {"start_output": categorical_cross_entropy_loss, "end_output": categorical_cross_entropy_loss}
+
+lossWeights = {"start_output": 1.0, "end_output": 1.0}
 # Load model
-def load_model(dir='./models/model_21_12_2021_15_41_21'):
+def load_model(dir='./models/model_22_12_2021_11_16_34'):
     '''
         - Load the trained model using keras.models.load_model
         - Load the tokenizer word index to give the words 
@@ -35,7 +39,7 @@ def load_model(dir='./models/model_21_12_2021_15_41_21'):
             Max sequence length (int)
     '''
     print("Loading model...")
-    model = keras.models.load_model(f'{dir}/model', custom_objects={'joint_loss': joint_loss})
+    model = keras.models.load_model(f'{dir}/model', custom_objects={'test_loss':categorical_cross_entropy_loss})
     with open(f'{dir}/tokenizer.txt') as f:
         tokenizer_word_index = json.load(f)
     with open(f'{dir}/MAX_SEQ_LEN.txt') as f:
@@ -138,6 +142,7 @@ def get_predicitons(model, context, questions):
     '''Use the model to predict on the testset'''
     print('Get predicitons..')
     predictions = model.predict([questions, context])
+    print("Gotten the predcitions!")
     return predictions
 
 
