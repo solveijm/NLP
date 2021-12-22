@@ -1,3 +1,6 @@
+#------------------------------------------------------------------------------
+# File for using the trained models to get predictions
+#------------------------------------------------------------------------------
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -10,6 +13,9 @@ import sys
 
 
 def joint_loss(y_true, y_pred):
+    '''
+    Define loss function used in the trained model
+    '''
     loss_start = tf.keras.losses.CategoricalCrossentropy()(y_true[0], y_pred[0])
     loss_end = tf.keras.losses.CategoricalCrossentropy()(y_true[1], y_pred[1])
     #tf.print("Pred start", y_pred[0])
@@ -17,6 +23,17 @@ def joint_loss(y_true, y_pred):
 
 # Load model
 def load_model(dir='./models/model_21_12_2021_15_41_21'):
+    '''
+        - Load the trained model using keras.models.load_model
+        - Load the tokenizer word index to give the words 
+        the same index as in training.
+        - Load MAX_SEQ_LEN used in training to pad testset 
+        to the correct length.
+        Outputs:
+            Trained model
+            Tokenizer word to index dictionary
+            Max sequence length (int)
+    '''
     print("Loading model...")
     model = keras.models.load_model(f'{dir}/model', custom_objects={'joint_loss': joint_loss})
     with open(f'{dir}/tokenizer.txt') as f:
@@ -27,15 +44,31 @@ def load_model(dir='./models/model_21_12_2021_15_41_21'):
 
 
 def get_test_data(path, tokenizer_word_index, MAX_SEQ_LEN):
+    '''
+        Loads testdata, makes it into a dataframe, lower the 
+        text and strip text and tokenize the words using the 
+        word_index dict from training and padds sequences.
+        Input:
+            Path to the testdata file
+            tokenizer word index list from training
+            MAX_SEQ_LEN (int) used in training
+        Ouput:
+            tokenized context (np.array)
+            tokenized question (np.array)
+            dataframe
+
+    '''
     print(f'Get test data from {path}')
     # Import json file from path
-    def load_json(dataset_path="training_set.json"):    
+    def load_json(dataset_path="training_set.json"):
+        '''Load testdata from json file'''    
         with open(dataset_path) as f:
             raw_json = json.load(f)
 
         return raw_json['data']
 
     def create_dataframe(data):
+        '''Create dataframe of the given data'''
         contexts = []
         questions = []
         question_ids = []
@@ -50,7 +83,7 @@ def get_test_data(path, tokenizer_word_index, MAX_SEQ_LEN):
         return df
 
     def clean_text(dataframe):
-
+        '''Make the text into lower and remove all leading and trailing whitespace'''
         def lower(text: str) -> str:
             return text.lower()
         def strip_text(text: str) -> str:
@@ -64,7 +97,6 @@ def get_test_data(path, tokenizer_word_index, MAX_SEQ_LEN):
         def text_prepare(text: str) -> str:
             """
             Applies a list of pre-processing functions in sequence (reduce).
-            Note that the order is important here!
             """
 
             filter_methods = PREPROCESSING_PIPELINE
@@ -88,7 +120,7 @@ def get_test_data(path, tokenizer_word_index, MAX_SEQ_LEN):
         return padded
 
     def tokenize(df, tokenizer_word_index, MAX_SEQ_LEN):
-        # HOW TO HANDLE TOKENIZER?????
+        '''Creates a tokenizer using the word_index dicitonary from training'''
         tokenizer = Tokenizer()
         tokenizer.word_index = tokenizer_word_index
         context = textToTensor(tokenizer, MAX_SEQ_LEN, df['context'])
@@ -103,17 +135,20 @@ def get_test_data(path, tokenizer_word_index, MAX_SEQ_LEN):
 
 
 def get_predicitons(model, context, questions):
+    '''Use the model to predict on the testset'''
     print('Get predicitons..')
-    predictions = model.predict([context, questions])
+    predictions = model.predict([questions, context])
     return predictions
 
 
 def make_answer_dict(start_preds, end_preds, df):
+    '''Convert predicitons to a dicitonary containing question ID and answer text'''
     print('Convert predicitons to answer text..')
     def get_word_index(prediction):
         return [np.argmax(prediction[i]) for i in range(len(prediction))]
 
     def get_answer_text(start, end, index, df):
+        '''Get answer text from context'''
         words = df['context'][index].split(' ')[start:end]
         answ = " ".join(words)
         # NB!!!: fore some reason the end is projected to be before the start so the answers are empty strings. 
@@ -135,6 +170,7 @@ def make_answer_dict(start_preds, end_preds, df):
     return answer_dict
 
 def write_predictions(answer_dict, path):
+    '''Write answers to a prediciton file'''
     print(f'Saving answer to {path}')
     with open(path, 'w') as file:
      file.write(json.dumps(answer_dict))
