@@ -26,7 +26,7 @@ losses = {"start_output": categorical_cross_entropy_loss, "end_output": categori
 
 lossWeights = {"start_output": 1.0, "end_output": 1.0}
 # Load model
-def load_model(dir='./models/model_22_12_2021_11_16_34'):
+def load_model(dir='./models/model_23_12_2021_14:08:49'):
     '''
         - Load the trained model using keras.models.load_model
         - Load the tokenizer word index to give the words 
@@ -39,7 +39,7 @@ def load_model(dir='./models/model_22_12_2021_11_16_34'):
             Max sequence length (int)
     '''
     print("Loading model...")
-    model = keras.models.load_model(f'{dir}/model', custom_objects={'test_loss':categorical_cross_entropy_loss})
+    model = keras.models.load_model(f'{dir}/model', custom_objects={'categorical_cross_entropy_loss':categorical_cross_entropy_loss})
     with open(f'{dir}/tokenizer.txt') as f:
         tokenizer_word_index = json.load(f)
     with open(f'{dir}/MAX_SEQ_LEN.txt') as f:
@@ -179,9 +179,9 @@ def write_predictions(answer_dict, path):
     with open(path, 'w') as file:
      file.write(json.dumps(answer_dict))
 
-def main(test_path='./dataset/test.json', prediction_path='predict.txt'):
+def main(test_path='./dataset/test.json', prediction_path='predict.txt', model_folder='./models/model_23_12_2021_14:08:49'):
     print(os.getcwd())
-    model, tokenizer_word_index, MAX_SEQ_LEN = load_model()
+    model, tokenizer_word_index, MAX_SEQ_LEN = load_model(model_folder)
     context, question, df = get_test_data(test_path, tokenizer_word_index, MAX_SEQ_LEN)
     pred_start, pred_end = get_predicitons(model, context, question)
     answer_dict = make_answer_dict(pred_start, pred_end, df)
