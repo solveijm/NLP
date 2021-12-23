@@ -154,13 +154,12 @@ def make_answer_dict(start_preds, end_preds, df):
 
     def get_answer_text(start, end, index, df):
         '''Get answer text from context'''
-        words = df['context'][index].split(' ')[start:end+1]
-        answ = " ".join(words)
-        # NB!!!: fore some reason the end is projected to be before the start so the answers are empty strings. 
-        # Just doing this for now.
-        if answ == "":
-            print("\n\nSOMETHING STRANGE IS GOING ON AND END PRED IS BEFORE START PRED\n\n")
-            answ = df['context'][index].split(' ')[start]
+        try:
+            words = df['context'][index].split(' ')[start:end+1]
+            answ = " ".join(words)
+        except IndexError:
+            print('When making answer, got index out of range')
+            answ = ""
         return answ
 
     answer_dict = {}
