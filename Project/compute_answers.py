@@ -11,7 +11,7 @@ from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 import sys
 from keras import backend as K
-
+import os
 
 
 _EPSILON = 1e-7
@@ -64,7 +64,7 @@ def get_test_data(path, tokenizer_word_index, MAX_SEQ_LEN):
     '''
     print(f'Get test data from {path}')
     # Import json file from path
-    def load_json(dataset_path="training_set.json"):
+    def load_json(dataset_path="./dataset/test.json"):
         '''Load testdata from json file'''    
         with open(dataset_path) as f:
             raw_json = json.load(f)
@@ -179,7 +179,8 @@ def write_predictions(answer_dict, path):
     with open(path, 'w') as file:
      file.write(json.dumps(answer_dict))
 
-def main(test_path, prediction_path):
+def main(test_path='./dataset/test.json', prediction_path='predict.txt'):
+    print(os.getcwd())
     model, tokenizer_word_index, MAX_SEQ_LEN = load_model()
     context, question, df = get_test_data(test_path, tokenizer_word_index, MAX_SEQ_LEN)
     pred_start, pred_end = get_predicitons(model, context, question)
