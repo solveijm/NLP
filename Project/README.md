@@ -1,7 +1,6 @@
 # NLP Project
 
-The goal of this project is to create a NLP system that, given a paragraph and a question regard-
-ing it, provides a single answer, which is obtained selecting a span of text from the paragraph.
+The goal of this project is to create a NLP system that, given a paragraph and a question regarding it, provides a single answer, which is obtained selecting a span of text from the paragraph.
 
 ## How to run
 - cd into the project folder
