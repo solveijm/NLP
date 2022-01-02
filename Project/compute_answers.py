@@ -189,9 +189,10 @@ def parse_args():
         sys.exit(1)
     return parser.parse_args()
 
-def main(test_path='./dataset/test.json', prediction_path='predict.txt', model_folder='./models/model_30_12_2021_17_56_51'):
+def main(test_path='./dataset/test.json', prediction_path='predict.txt'):
     ''' Main function '''
-    print(os.getcwd())
+    # Path to where the newest model is stored
+    model_folder='./models/model_30_12_2021_17_56_51'
     model, tokenizer_word_index, MAX_SEQ_LEN = load_model(model_folder)
     context, question, df = get_test_data(test_path, tokenizer_word_index, MAX_SEQ_LEN)
     pred_start, pred_end = get_predicitons(model, context, question)
