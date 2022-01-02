@@ -12,7 +12,7 @@ from keras.preprocessing.sequence import pad_sequences
 import sys
 from keras import backend as K
 import os
-
+import argparse
 
 _EPSILON = 1e-7
 def categorical_cross_entropy_loss(target, output):
@@ -26,7 +26,7 @@ losses = {"start_output": categorical_cross_entropy_loss, "end_output": categori
 
 lossWeights = {"start_output": 1.0, "end_output": 1.0}
 # Load model
-def load_model(dir='./models/model_23_12_2021_14:08:49'):
+def load_model(dir):
     '''
         - Load the trained model using keras.models.load_model
         - Load the tokenizer word index to give the words 
@@ -38,7 +38,7 @@ def load_model(dir='./models/model_23_12_2021_14:08:49'):
             Tokenizer word to index dictionary
             Max sequence length (int)
     '''
-    print("Loading model...")
+    print("\nLoading model...\n")
     model = keras.models.load_model(f'{dir}/model', custom_objects={'categorical_cross_entropy_loss':categorical_cross_entropy_loss})
     with open(f'{dir}/tokenizer.txt') as f:
         tokenizer_word_index = json.load(f)
@@ -62,7 +62,7 @@ def get_test_data(path, tokenizer_word_index, MAX_SEQ_LEN):
             dataframe
 
     '''
-    print(f'Get test data from {path}')
+    print(f'\nGet test data from {path}')
     # Import json file from path
     def load_json(dataset_path="./dataset/test.json"):
         '''Load testdata from json file'''    
@@ -140,15 +140,15 @@ def get_test_data(path, tokenizer_word_index, MAX_SEQ_LEN):
 
 def get_predicitons(model, context, questions):
     '''Use the model to predict on the testset'''
-    print('Get predicitons..')
+    print('\nGet predicitons..')
     predictions = model.predict([questions, context])
-    print("Gotten the predcitions!")
+    print("\nGotten the predcitions!")
     return predictions
 
 
 def make_answer_dict(start_preds, end_preds, df):
     '''Convert predicitons to a dicitonary containing question ID and answer text'''
-    print('Convert predicitons to answer text..')
+    print('\nConvert predicitons to answer text..')
     def get_word_index(prediction):
         return [np.argmax(prediction[i]) for i in range(len(prediction))]
 
@@ -175,11 +175,11 @@ def make_answer_dict(start_preds, end_preds, df):
 
 def write_predictions(answer_dict, path):
     '''Write answers to a prediciton file'''
-    print(f'Saving answer to {path}')
+    print(f'\nSaving answer to {path}')
     with open(path, 'w') as file:
      file.write(json.dumps(answer_dict))
 
-def main(test_path='./dataset/test.json', prediction_path='predict.txt', model_folder='./models/model_23_12_2021_14:08:49'):
+def main(test_path='./dataset/test.json', prediction_path='predict.txt', model_folder='./models/model_30_12_2021_17_56_51'):
     print(os.getcwd())
     model, tokenizer_word_index, MAX_SEQ_LEN = load_model(model_folder)
     context, question, df = get_test_data(test_path, tokenizer_word_index, MAX_SEQ_LEN)
@@ -187,12 +187,22 @@ def main(test_path='./dataset/test.json', prediction_path='predict.txt', model_f
     answer_dict = make_answer_dict(pred_start, pred_end, df)
     write_predictions(answer_dict, prediction_path)
 
+def parse_args():
+    parser = argparse.ArgumentParser('File for computing answers')
+    parser.add_argument('test_data_file', metavar='testset.json', help='Input testset data JSON file.')
+    parser.add_argument('--out-file', '-o', metavar='pred.txt',
+                        help='Write accuracy metrics to file (default is stdout).')
+    if len(sys.argv) == 0:
+        parser.print_help()
+        sys.exit(1)
+    return parser.parse_args()
+
 if __name__ == "__main__":
     # Default values
-    test_path = './SQUAD MATERIAL/training_set_copy.json'
-    prediction_path = 'predictions.txt'
-    if len(sys.argv) > 1:
-        test_path = sys.argv[1]
-        if len(sys.argv) > 2:
-            prediction_path = sys.argv[2]
+    OPTS = parse_args()
+    test_path = OPTS.test_data_file
+    if OPTS.out_file:
+        prediction_path = OPTS.out_file
+    else:
+        prediction_path = 'predictions.txt'
     main(test_path, prediction_path)
